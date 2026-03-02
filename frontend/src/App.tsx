@@ -1,63 +1,160 @@
+import { useState, useRef, useEffect } from 'react';
 import { Header } from './components/Header';
-import { ParticipantList } from './components/ParticipantList';
+import { CityList } from './components/CityList'; 
+
+interface City {
+  id: number;
+  name: string;
+  timezone: string;
+}
+
+interface SearchResult {
+  id: number;
+  name: string;
+  country: string;
+  timezone: string;
+}
 
 function App() {
+  const [cities, setCities] = useState<City[]>([]);
+  
+  // Состояния для поиска и выпадающего списка
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 1. Загрузка стартовых городов с бэкенда (ВЕРНУЛИ НА МЕСТО!)
+  useEffect(() => {
+    fetch("http://localhost:8000/cities")
+      .then(res => res.json())
+      .then(data => setCities(data.cities))
+      .catch(err => console.error("Ошибка загрузки:", err));
+  }, []);
+
+  // 2. Закрытие списка при клике вне него (Отдельный useEffect)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 3. Поиск через Open-Meteo
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=5`);
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch (e) {
+      console.error("Ошибка поиска:", e);
+    }
+  };
+
+  // 4. Единая функция: берет данные из клика и СРАЗУ отправляет на бэк
+  const handleSelectAndSaveCity = async (result: SearchResult) => {
+    if (!result.timezone) {
+      alert("У этого города не указана таймзона в базе!");
+      return;
+    }
+
+    const newCity = { name: result.name, timezone: result.timezone };
+
+    try {
+      // Отправляем на бэкенд
+      const response = await fetch("http://localhost:8000/cities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCity),
+      });
+
+      if (response.ok) {
+        const addedCity = await response.json();
+        setCities([...cities, addedCity]); // Добавляем в список на экране
+      }
+    } catch (error) {
+      console.error("Ошибка при сохранении:", error);
+    }
+
+    // Закрываем и очищаем выпадающее меню
+    setIsDropdownOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Header />
-      
-      {/* Главный контейнер с отступами */}
       <main className="px-8 py-8 max-w-[1600px] mx-auto">
-        
-        {/* Верхний блок: Заголовок слева, кнопки справа */}
         <div className="flex items-end justify-between mb-6">
           
-          {/* Текстовая часть */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900">World Time</h1>
             <p className="mt-2 text-lg text-gray-500">Track time across cities</p>
           </div>
-
-          {/* Кнопки управления */}
+          
           <div className="flex items-center gap-4">
-            
-            {/* Переключатель List / Grid */}
             <div className="flex items-center p-1 bg-white border border-gray-200 rounded-lg shadow-sm">
               <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-gray-100 rounded-md text-gray-900">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 List
               </button>
               <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                 Grid
               </button>
             </div>
 
-            {/* Кнопка Add city */}
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-black rounded-lg hover:bg-gray-800">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              Add city
-            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800"
+              >
+                + Add city
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-2">
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      placeholder="Search city..."
+                      onChange={(e) => handleSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
+                      autoFocus // Автоматически ставит курсор в поле
+                    />
+                  </div>
+                  
+                  <div className="mt-2 max-h-60 overflow-y-auto">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        onClick={() => handleSelectAndSaveCity(result)} // Вызываем новую функцию
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded-md flex justify-between items-center transition-colors"
+                      >
+                        <span className="font-medium text-sm">{result.name}</span>
+                        <span className="text-xs text-gray-400">{result.timezone.split('/')[1] || result.timezone}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Индикаторы статуса (точки) */}
-        <div className="flex items-center gap-6 mb-8 text-sm text-gray-500">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>0 cities in working hours</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span>3 cities in night</span>
-          </div>
-        </div>
-
-        {/* Контейнер для таймлайна (пока вставим сюда наш старый список для теста) */}
         <div className="p-4 bg-white border border-gray-200 shadow-sm rounded-xl">
-           <ParticipantList />
+           <CityList cities={cities} />
         </div>
-
       </main>
     </div>
   );
