@@ -1,21 +1,44 @@
+import { useState, useEffect } from 'react';
+
 export const Header = () => {
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    // Функция, которая вычисляет и форматирует текущее время
+    const updateTime = () => {
+      const now = new Date();
+      // Получаем время именно в часовом поясе Астаны в формате ЧЧ:ММ
+      const formattedTime = new Intl.DateTimeFormat('ru-RU', {
+        timeZone: 'Asia/Almaty',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(now);
+      
+      setCurrentTime(formattedTime);
+    };
+
+    updateTime(); // Вызываем сразу при загрузке страницы
+    
+    // Запускаем таймер, который будет обновлять время каждую минуту (60000 мс)
+    const intervalId = setInterval(updateTime, 60000);
+
+    // Очищаем таймер, если компонент будет удален с экрана
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
       
       {/* Левая часть: Логотип и навигация */}
       <div className="flex items-center gap-10">
-        {/* Логотип */}
-        <div className="text-xl font-bold text-black tracking-tight">
+        <div className="text-xl font-bold tracking-tight text-black">
           Meet Time
         </div>
         
-        {/* Навигация */}
         <nav className="flex items-center gap-2">
-          {/* Активная вкладка */}
           <button className="px-4 py-2 text-sm font-semibold text-black bg-gray-100 rounded-lg">
             World Time
           </button>
-          {/* Неактивная вкладка */}
           <button className="px-4 py-2 text-sm font-medium text-gray-500 transition-colors rounded-lg hover:text-black hover:bg-gray-50">
             Create Meeting
           </button>
@@ -31,8 +54,8 @@ export const Header = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {/* Пока хардкод, позже сделаем живое время */}
-          <span>22:32 &middot; Astana <span className="text-gray-400 font-normal">(UTC+5)</span></span>
+          {/* Выводим наше "живое" состояние времени */}
+          <span>{currentTime} &middot; Astana <span className="font-normal text-gray-400">(UTC+5)</span></span>
         </div>
 
         {/* Кнопка настроек */}

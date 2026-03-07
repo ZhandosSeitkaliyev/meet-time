@@ -13,9 +13,7 @@ app.add_middleware(
 )
 
 cities = [
-    City(id=1, name="Astana", timezone="Asia/Almaty"),
-    City(id=2, name="London", timezone="Europe/London"),
-    City(id=3, name="New York", timezone="America/New_York"),
+
 ]
 
 @app.get("/cities")
