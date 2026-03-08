@@ -1,4 +1,9 @@
+// src/widgets/city-timeline/ui/Timeline.tsx
 import { useState, useEffect } from 'react';
+import { getUtcOffsetString } from '../../../shared/lib/time';
+import { ClockIcon } from '../../../shared/ui/icons';
+import { getTimeOfDayInfo } from '../../../entities/city/model/types';
+import type { City } from '../../../entities/city/model/types';
 
 interface City {
   id: number;
@@ -6,47 +11,7 @@ interface City {
   timezone: string;
 }
 
-// Вспомогательная функция для UTC (например, UTC+5)
-const getUtcOffsetString = (timezone: string) => {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'shortOffset',
-    });
-    const parts = formatter.formatToParts(new Date());
-    const tzPart = parts.find((p) => p.type === 'timeZoneName');
-    return tzPart ? tzPart.value.replace('GMT', 'UTC') : '';
-  } catch (e) {
-    return '';
-  }
-};
 
-// --- ИКОНКИ ДЛЯ БЕЙДЖЕЙ ---
-const SunIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-// Логика определения времени суток (цвета и иконки как в твоем Figma)
-const getTimeOfDayInfo = (hour: number) => {
-  if (hour >= 6 && hour < 12) return { label: 'Morning', colors: 'text-yellow-600 bg-yellow-50', Icon: SunIcon };
-  if (hour >= 12 && hour < 18) return { label: 'Afternoon', colors: 'text-orange-600 bg-orange-50', Icon: SunIcon };
-  if (hour >= 18 && hour < 22) return { label: 'Evening', colors: 'text-purple-600 bg-purple-50', Icon: MoonIcon };
-  return { label: 'Night', colors: 'text-blue-500 bg-blue-50', Icon: MoonIcon };
-};
 
 
 export const Timeline = ({ cities }: { cities: City[] }) => {
