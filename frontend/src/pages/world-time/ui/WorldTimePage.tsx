@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import type { City } from '../../../entities/city/model/types';
-import { Header } from '../../../widgets/header/ui/Header';
 import { Timeline } from '../../../widgets/city-timeline/ui/Timeline';
 import { CityGrid } from '../../../widgets/city-grid/ui/CityGrid';
 import { AddCity } from '../../../features/add-city/ui/AddCity';
@@ -35,8 +34,6 @@ export const WorldTimePage = () => {
   }).length;
 
   return (
-    <div className="min-h-screen font-sans bg-gray-50">
-      <Header />
       <main className="px-8 py-8 max-w-[1600px] mx-auto">
         <div className="flex items-end justify-between mb-6">
           
@@ -84,6 +81,5 @@ export const WorldTimePage = () => {
           <CityGrid cities={cities} />
         )}
       </main>
-    </div>
   );
 };
