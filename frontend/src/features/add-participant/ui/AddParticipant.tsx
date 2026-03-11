@@ -41,16 +41,33 @@ export const AddParticipant = ({ onParticipantAdded }: { onParticipantAdded: (pa
     setSearchResults([]);
   };
 
-  const handleAddSubmit = () => {
+const handleAddSubmit = async () => {
     if (!personName.trim()) return alert("Please enter a name");
     if (!selectedCity) return alert("Please select a valid city from the list");
 
-    onParticipantAdded({
-      id: Date.now(),
+    // Формируем данные для отправки на бэк (без ID)
+    const newPersonData = {
       name: personName.trim(),
       cityName: selectedCity.name,
       timezone: selectedCity.timezone,
-    });
+    };
+
+    try {
+      // Отправляем POST запрос
+      const response = await fetch("http://localhost:8000/participants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPersonData),
+      });
+
+      if (response.ok) {
+        // Бэкенд вернул нам готового участника с присвоенным ID
+        const addedParticipant = await response.json();
+        onParticipantAdded(addedParticipant); // Добавляем на экран
+      }
+    } catch (error) {
+      console.error("Ошибка при сохранении участника:", error);
+    }
 
     // Очищаем форму и закрываем модалку
     setPersonName("");

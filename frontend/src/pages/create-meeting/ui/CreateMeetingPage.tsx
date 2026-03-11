@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Participant } from '../../../entities/participant/model/types';
 import { AddParticipant } from '../../../features/add-participant/ui/AddParticipant';
 import { MeetingTimeline } from '../../../widgets/meeting-timeline/ui/MeetingTimeline';
@@ -6,12 +6,28 @@ import { MeetingTimeline } from '../../../widgets/meeting-timeline/ui/MeetingTim
 export const CreateMeetingPage = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
 
+  useEffect(() => {
+    fetch("http://localhost:8000/participants")
+      .then(res => res.json())
+      .then(data => setParticipants(data.participants))
+      .catch(err => console.error("Ошибка загрузки участников:", err));
+  }, []);
+
   const handleAddParticipant = (newParticipant: Participant) => {
     // Проверка дубликатов по имени
     if (participants.some(p => p.name.toLowerCase() === newParticipant.name.toLowerCase())) {
         return alert("Participant with this name is already added!");
     }
     setParticipants([...participants, newParticipant]);
+  };
+
+  const handleDeleteParticipant = async (id: number) => {
+    try {
+      await fetch(`http://localhost:8000/participants/${id}`, { method: 'DELETE' });
+      setParticipants(participants.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Ошибка при удалении:", error);
+    }
   };
 
   return (
@@ -52,7 +68,7 @@ export const CreateMeetingPage = () => {
       </div>
 
       {/* ГЛАВНЫЙ ТАЙМЛАЙН */}
-      <MeetingTimeline participants={participants} />
+      <MeetingTimeline participants={participants} onDelete={handleDeleteParticipant} />
 
     </main>
   );

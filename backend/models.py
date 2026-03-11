@@ -9,3 +9,11 @@ class City(BaseModel):
 class CityCreate(BaseModel):
     name: str
     timezone: str
+
+class ParticipantCreate(BaseModel):
+    name: str
+    cityName: str
+    timezone: str
+
+class Participant(ParticipantCreate):
+    id: int

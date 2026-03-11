@@ -1,4 +1,5 @@
 // src/widgets/city-grid/ui/CityGrid.tsx
+import { TrashIcon } from '../../../shared/ui/icons';
 import { useState, useEffect } from 'react';
 import { getUtcOffsetString } from '../../../shared/lib/time';
 import { ClockIcon } from '../../../shared/ui/icons';
@@ -12,7 +13,7 @@ interface City {
 }
 
 
-export const CityGrid = ({ cities }: { cities: City[] }) => {
+export const CityGrid = ({ cities, onDelete }: { cities: City[], onDelete: (id: number) => void }) => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -58,8 +59,16 @@ export const CityGrid = ({ cities }: { cities: City[] }) => {
         const nowPercent = ((currentLocalHour * 60 + currentLocalMinute) / (24 * 60)) * 100;
 
         return (
-          <div key={city.id} className="p-6 transition-shadow bg-white border border-gray-200 shadow-sm rounded-2xl hover:shadow-md">
-            
+          <div key={city.id} className="relative p-6 transition-shadow bg-white border border-gray-200 shadow-sm rounded-2xl hover:shadow-md group">
+              
+              {/* 2. Вставляем нашу кнопку СРАЗУ ПОСЛЕ открывающего тега <div> */}
+              <button 
+                onClick={() => onDelete(city.id)}
+                className="absolute p-2 text-gray-400 transition-opacity opacity-0 top-4 right-4 hover:text-red-500 hover:bg-red-50 rounded-lg group-hover:opacity-100"
+              >
+                <TrashIcon />
+              </button>
+
             {/* Шапка: Город и UTC */}
             <div>
               <h3 className="text-lg font-bold text-gray-900">{city.name}</h3>

@@ -33,6 +33,24 @@ export const WorldTimePage = () => {
     return localHour >= 9 && localHour < 18;
   }).length;
 
+  const handleDeleteCity = async (id: number) => {
+      try {
+        console.log(`Пробуем удалить город с ID: ${id}`); // Проверяем, нажимается ли кнопка
+        
+        const response = await fetch(`http://localhost:8000/cities/${id}`, { method: 'DELETE' });
+        
+        if (response.ok) {
+          console.log("Бэкенд успешно удалил город!");
+          // Обновляем список на экране только после успеха
+          setCities(cities.filter(city => city.id !== id));
+        } else {
+          console.error(`Ошибка Бэкенда! Статус: ${response.status}`);
+        }
+      } catch (error) {
+        console.error("Сетевая ошибка при удалении:", error);
+      }
+    };
+
   return (
       <main className="px-8 py-8 max-w-[1600px] mx-auto">
         <div className="flex items-end justify-between mb-6">
@@ -76,10 +94,12 @@ export const WorldTimePage = () => {
         </div>
 
         {viewMode === 'list' ? (
-          <Timeline cities={cities} />
+          <Timeline cities={cities} onDelete={handleDeleteCity} />
         ) : (
-          <CityGrid cities={cities} />
+          <CityGrid cities={cities} onDelete={handleDeleteCity} />
         )}
+
+        
       </main>
   );
 };

@@ -1,6 +1,7 @@
 // src/widgets/meeting-timeline/ui/MeetingTimeline.tsx
 import { useState, useEffect } from 'react';
 import type { Participant } from '../../../entities/participant/model/types';
+import { TrashIcon } from '../../../shared/ui/icons';
 
 const getCellColor = (hour: number) => {
   if (hour >= 9 && hour < 18) return 'bg-[#A3E5C7]'; // Working Hours (Green)
@@ -8,7 +9,7 @@ const getCellColor = (hour: number) => {
   return 'bg-[#D9D9F0]'; // Night (Purple/Blue)
 };
 
-export const MeetingTimeline = ({ participants }: { participants: Participant[] }) => {
+export const MeetingTimeline = ({ participants, onDelete }: { participants: Participant[], onDelete: (id: number) => void }) => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export const MeetingTimeline = ({ participants }: { participants: Participant[] 
         </div>
         <div className="w-24 flex-shrink-0"></div> {/* Пустое место над бейджами */}
       </div>
+      
 
       {/* Контейнер для строк */}
       <div className="relative space-y-2">
@@ -110,12 +112,21 @@ export const MeetingTimeline = ({ participants }: { participants: Participant[] 
                 })}
               </div>
 
-              {/* 3. Бейдж справа */}
-              <div className="flex justify-end w-24 flex-shrink-0 pl-4">
+              {/* 3. Бейдж справа и Корзина */}
+              <div className="flex items-center justify-end w-32 flex-shrink-0 pl-4 gap-2">
                 <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-md ${statusColor}`}>
                   {statusLabel}
                 </span>
+                
+                {/* НОВАЯ КНОПКА */}
+                <button 
+                  onClick={() => onDelete(p.id)}
+                  className="p-1 text-gray-300 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
+                >
+                  <TrashIcon />
+                </button>
               </div>
+              
             </div>
           );
         })}
