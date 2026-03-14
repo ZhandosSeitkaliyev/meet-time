@@ -1,41 +1,107 @@
-// src/widgets/meeting-timeline/ui/MeetingTimeline.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Participant } from '../../../entities/participant/model/types';
-import { TrashIcon } from '../../../shared/ui/icons';
+import { TrashIcon, ClockIcon } from '../../../shared/ui/icons';
 
 const getCellColor = (hour: number) => {
-  if (hour >= 9 && hour < 18) return 'bg-[#A3E5C7]'; // Working Hours (Green)
-  if ((hour >= 6 && hour < 9) || (hour >= 18 && hour < 22)) return 'bg-[#F5DEAB]'; // Borderline (Yellow)
-  return 'bg-[#D9D9F0]'; // Night (Purple/Blue)
+  if (hour >= 9 && hour < 18) return 'bg-[#A3E5C7]';
+  if ((hour >= 6 && hour < 9) || (hour >= 18 && hour < 22)) return 'bg-[#F5DEAB]';
+  return 'bg-[#D9D9F0]';
 };
 
-export const MeetingTimeline = ({ participants, onDelete }: { participants: Participant[], onDelete: (id: number) => void }) => {
+// ПРИНИМАЕМ dayOffset ИЗ ПРОПСОВ
+export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { participants: Participant[], onDelete: (id: number) => void, dayOffset: number }) => {
   const [now, setNow] = useState(new Date());
+  
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const gridRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  const offsets = Array.from({ length: 24 }, (_, i) => i - 12);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setDragOffset(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const calculateOffsetMinutes = (clientX: number): number | null => {
+    if (!gridRef.current) return null;
+    const rect = gridRef.current.getBoundingClientRect();
+    
+    let x = clientX - rect.left;
+    x = Math.max(0, Math.min(x, rect.width));
+    
+    const percent = x / rect.width;
+    const rawMinutesFromLeft = percent * 1440;
+    const snappedMinutesFromLeft = Math.round(rawMinutesFromLeft / 10) * 10;
+    
+    // МАТЕМАТИКА: учитываем сдвиг дней (dayOffset * 24 часа)
+    const nowMinutesFromLeft = 60 + now.getMinutes() - (dayOffset * 24 * 60); 
+    
+    return snappedMinutesFromLeft - nowMinutesFromLeft;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const offset = calculateOffsetMinutes(e.clientX);
+    if (offset !== null) {
+      setDragOffset(offset);
+      setIsDragging(true);
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const offset = calculateOffsetMinutes(e.clientX);
+      if (offset !== null) {
+        setDragOffset(offset);
+      }
+    };
+    const handleMouseUp = () => setIsDragging(false);
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, now, dayOffset]); // Добавили dayOffset в зависимости
+
+  // СДВИГАЕМ СЕТКУ ЧАСОВ (+24 или -24 часа)
+  const offsets = Array.from({ length: 24 }, (_, i) => i - 1 + (dayOffset * 24)); 
+  
   const currentMinute = now.getMinutes();
-  const nowPercent = ((12 + currentMinute / 60) / 24) * 100;
+  const nowMinutesFromLeft = 60 + currentMinute - (dayOffset * 24 * 60);
+  const nowPercent = (nowMinutesFromLeft / 1440) * 100;
+  
+  const durationWidthPercent = (30 / 1440) * 100; 
+  const activePercent = dragOffset !== null ? (((nowMinutesFromLeft + dragOffset) / 1440) * 100) : 0;
 
   if (participants.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 text-sm">
+      <div className="flex items-center justify-center h-64 text-sm text-gray-400 border-2 border-gray-200 border-dashed rounded-2xl">
         No participants added. Click "+ Add person" to start scheduling.
       </div>
     );
   }
 
   return (
-    <div className="relative pb-8">
+    <div className="relative pb-8 select-none" ref={containerRef}>
       
-      {/* Шапка времени (00 02 04 ...) */}
-      <div className="flex w-full px-4 mb-4">
-        <div className="w-56 flex-shrink-0"></div> {/* Пустое место над именами */}
-        <div className="relative flex justify-between flex-1 text-xs font-semibold text-gray-400">
+      <div className="flex w-full px-4 mb-3">
+        <div className="flex-shrink-0 w-72 pr-6"></div>
+        <div className="relative flex justify-between flex-1 text-xs font-semibold text-gray-400" ref={gridRef}>
           {offsets.map((offset) => {
             const d = new Date(now);
             d.setHours(now.getHours() + offset);
@@ -46,56 +112,80 @@ export const MeetingTimeline = ({ participants, onDelete }: { participants: Part
             );
           })}
         </div>
-        <div className="w-24 flex-shrink-0"></div> {/* Пустое место над бейджами */}
+        <div className="flex-shrink-0 pl-4 w-32"></div>
       </div>
-      
 
-      {/* Контейнер для строк */}
-      <div className="relative space-y-2">
-        
-        {/* Линия NOW */}
-        <div 
-          className="absolute top-0 bottom-0 z-20 w-px bg-gray-900 pointer-events-none -mt-6"
-          style={{ left: `calc(15rem + (100% - 15rem - 6rem) * ${nowPercent / 100})` }}
-        >
-          <div className="absolute px-2 py-1 text-[10px] font-bold text-white -translate-x-1/2 bg-gray-900 rounded-full -top-4">
-            NOW
-          </div>
+      <div 
+        className="relative py-2 bg-white border border-gray-200 shadow-sm rounded-xl cursor-ew-resize"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="absolute top-0 bottom-0 z-10 pointer-events-none" style={{ left: '19rem', right: '9rem' }}>
+          
+          {/* УМНАЯ ЛИНИЯ NOW: Показывается ТОЛЬКО если она в пределах текущего дня */}
+          {nowPercent >= 0 && nowPercent <= 100 && (
+            <div 
+              className="absolute top-0 bottom-0 w-px bg-gray-900"
+              style={{ left: `${nowPercent}%` }}
+            >
+              <div className="absolute px-2 py-1 text-[9px] font-bold text-white -translate-x-1/2 bg-gray-900 rounded-full -top-4">
+                NOW
+              </div>
+            </div>
+          )}
+
+          {dragOffset !== null && (
+            <div 
+              className={`absolute top-0 bottom-0 bg-blue-500/15 border-x border-blue-400 transition-all ${isDragging ? 'duration-0' : 'duration-100'}`}
+              style={{ 
+                left: `${Math.max(0, Math.min(100 - durationWidthPercent, activePercent))}%`, 
+                width: `${durationWidthPercent}%` 
+              }}
+            />
+          )}
         </div>
 
         {participants.map((p) => {
-          // Вычисляем локальное время участника
-          const localTimeStr = new Intl.DateTimeFormat('en-GB', {
-            timeZone: p.timezone, hour: '2-digit', minute: '2-digit'
-          }).format(now);
-          const currentLocalHour = parseInt(localTimeStr.split(':')[0], 10);
+          const localNowFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: p.timezone, hour: '2-digit', minute: '2-digit' });
+          const localNowStr = localNowFormatter.format(now);
 
+          // Если выделения нет, часы показывают базу текущего выбранного дня (now + сдвиг дней)
+          const baseDragOffset = dragOffset !== null ? dragOffset : (dayOffset * 24 * 60);
+          const activeDate = new Date(now.getTime() + baseDragOffset * 60000);
+          const localActiveStr = localNowFormatter.format(activeDate);
+          
+          const activeLocalHour = parseInt(localActiveStr.split(':')[0], 10);
           let statusLabel = 'Night';
-          let statusColor = 'text-blue-600 bg-blue-50 border-blue-100';
-          if (currentLocalHour >= 9 && currentLocalHour < 18) {
+          let statusColor = 'text-blue-500 bg-blue-50 border-blue-100';
+          if (activeLocalHour >= 9 && activeLocalHour < 18) {
             statusLabel = 'Work';
             statusColor = 'text-green-600 bg-green-50 border-green-100';
-          } else if ((currentLocalHour >= 6 && currentLocalHour < 9) || (currentLocalHour >= 18 && currentLocalHour < 22)) {
+          } else if ((activeLocalHour >= 6 && activeLocalHour < 9) || (activeLocalHour >= 18 && activeLocalHour < 22)) {
             statusLabel = 'Borderline';
             statusColor = 'text-yellow-600 bg-yellow-50 border-yellow-100';
           }
 
           return (
-            <div key={p.id} className="flex items-center w-full px-4 py-3 bg-white border border-gray-100 rounded-xl hover:shadow-sm">
+            <div key={p.id} className="flex items-center w-full px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
               
-              {/* 1. Имя и Город */}
-              <div className="flex items-center justify-between w-56 flex-shrink-0 pr-6">
-                <div>
-                  <span className="font-semibold text-gray-900">{p.name}</span>
-                  <span className="text-gray-400 text-sm ml-1.5">&middot; {p.cityName}</span>
+              <div className="flex items-center justify-between flex-shrink-0 pr-6 w-72">
+                <div className="flex-1 pr-2 truncate">
+                  <div className="font-semibold text-gray-900 truncate">
+                    {p.name.split(',')[0]}
+                    <span className="font-normal text-gray-400 text-[11px] ml-1.5">&middot; {p.cityName}</span>
+                  </div>
                 </div>
-                <div className="text-sm font-medium text-gray-700">
-                  {localTimeStr}
+                
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#1A1A1A] text-[#FFB020] px-2 py-1 rounded-md text-sm font-bold tracking-widest leading-none shadow-sm text-center">
+                    {localActiveStr}
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-medium w-16">
+                    Now: {localNowStr}
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Полоска времени */}
-              <div className="flex flex-1 h-3.5 gap-0.5 overflow-hidden rounded-sm">
+              <div className="relative flex flex-1 overflow-hidden rounded-sm h-3.5 gap-0.5">
                 {offsets.map((offset) => {
                   const cellDate = new Date(now);
                   cellDate.setHours(now.getHours() + offset);
@@ -105,28 +195,29 @@ export const MeetingTimeline = ({ participants, onDelete }: { participants: Part
                   return (
                     <div 
                       key={offset} 
-                      className={`flex-1 ${getCellColor(cellHour)} opacity-90`}
+                      className={`flex-1 opacity-90 ${getCellColor(cellHour)}`}
                       title={`${cellHourStr}:00`}
                     ></div>
                   );
                 })}
               </div>
 
-              {/* 3. Бейдж справа и Корзина */}
-              <div className="flex items-center justify-end w-32 flex-shrink-0 pl-4 gap-2">
-                <span className={`px-2 py-0.5 text-[11px] font-medium border rounded-md ${statusColor}`}>
+              <div className="flex items-center justify-end flex-shrink-0 pl-4 w-32 gap-2">
+                <span className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border rounded-md transition-colors ${statusColor}`}>
+                  <ClockIcon />
                   {statusLabel}
                 </span>
                 
-                {/* НОВАЯ КНОПКА */}
                 <button 
-                  onClick={() => onDelete(p.id)}
-                  className="p-1 text-gray-300 transition-colors rounded-md hover:text-red-500 hover:bg-red-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(p.id);
+                  }}
+                  className="p-1 text-gray-300 transition-colors rounded-md hover:text-red-500 hover:bg-red-50 z-20 relative"
                 >
                   <TrashIcon />
                 </button>
               </div>
-              
             </div>
           );
         })}

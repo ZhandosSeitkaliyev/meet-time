@@ -5,6 +5,9 @@ import { MeetingTimeline } from '../../../widgets/meeting-timeline/ui/MeetingTim
 
 export const CreateMeetingPage = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  
+  // НОВОЕ СОСТОЯНИЕ: Сдвиг дней (-1 = Вчера, 0 = Сегодня, 1 = Завтра)
+  const [dayOffset, setDayOffset] = useState<number>(0);
 
   useEffect(() => {
     fetch("http://localhost:8000/participants")
@@ -13,8 +16,7 @@ export const CreateMeetingPage = () => {
       .catch(err => console.error("Ошибка загрузки участников:", err));
   }, []);
 
-  const handleAddParticipant = (newParticipant: Participant) => {
-    // Проверка дубликатов по имени
+  const handleAddParticipant = async (newParticipant: Participant) => {
     if (participants.some(p => p.name.toLowerCase() === newParticipant.name.toLowerCase())) {
         return alert("Participant with this name is already added!");
     }
@@ -36,21 +38,34 @@ export const CreateMeetingPage = () => {
       {/* ВЕРХНЯЯ ПАНЕЛЬ ИНСТРУМЕНТОВ */}
       <div className="flex items-center justify-between mb-8 bg-white p-4 border border-gray-200 rounded-2xl shadow-sm">
         
-        {/* Вкладки дней (заглушки) и кнопка добавления */}
         <div className="flex items-center gap-4">
+          {/* ОЖИВШИЕ КНОПКИ ДНЕЙ */}
           <div className="flex items-center bg-gray-100 p-1 rounded-lg text-sm font-medium text-gray-500">
-            <button className="px-4 py-1.5 hover:text-gray-900 rounded-md">Yesterday</button>
-            <button className="px-4 py-1.5 text-gray-900 bg-white shadow-sm rounded-md">Today</button>
-            <button className="px-4 py-1.5 hover:text-gray-900 rounded-md">Tomorrow</button>
+            <button 
+              onClick={() => setDayOffset(-1)}
+              className={`px-4 py-1.5 rounded-md transition-colors ${dayOffset === -1 ? 'text-gray-900 bg-white shadow-sm' : 'hover:text-gray-900'}`}
+            >
+              Yesterday
+            </button>
+            <button 
+              onClick={() => setDayOffset(0)}
+              className={`px-4 py-1.5 rounded-md transition-colors ${dayOffset === 0 ? 'text-gray-900 bg-white shadow-sm' : 'hover:text-gray-900'}`}
+            >
+              Today
+            </button>
+            <button 
+              onClick={() => setDayOffset(1)}
+              className={`px-4 py-1.5 rounded-md transition-colors ${dayOffset === 1 ? 'text-gray-900 bg-white shadow-sm' : 'hover:text-gray-900'}`}
+            >
+              Tomorrow
+            </button>
           </div>
 
-          {/* НАША НОВАЯ КНОПКА-МОДАЛКА */}
           <AddParticipant onParticipantAdded={handleAddParticipant} />
         </div>
 
       </div>
 
-      {/* ЛЕГЕНДА ЦВЕТОВ (Day periods) */}
       <div className="flex items-center gap-6 mb-8 text-xs font-medium text-gray-500">
         <span className="text-gray-400">Day periods</span>
         <div className="flex items-center gap-2">
@@ -67,8 +82,12 @@ export const CreateMeetingPage = () => {
         </div>
       </div>
 
-      {/* ГЛАВНЫЙ ТАЙМЛАЙН */}
-      <MeetingTimeline participants={participants} onDelete={handleDeleteParticipant} />
+      {/* ПЕРЕДАЕМ dayOffset В ТАЙМЛАЙН */}
+      <MeetingTimeline 
+        participants={participants} 
+        onDelete={handleDeleteParticipant} 
+        dayOffset={dayOffset} 
+      />
 
     </main>
   );

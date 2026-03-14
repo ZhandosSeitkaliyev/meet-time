@@ -107,7 +107,7 @@ const handleAddSubmit = async () => {
                   type="text" 
                   value={personName}
                   onChange={(e) => setPersonName(e.target.value)}
-                  placeholder="Elena"
+                  placeholder="Dimash"
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:bg-white"
                   autoFocus
                 />

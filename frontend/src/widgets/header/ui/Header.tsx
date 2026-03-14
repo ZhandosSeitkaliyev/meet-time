@@ -29,9 +29,12 @@ export const Header = ({ currentPage, onPageChange }: HeaderProps) => {
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
       <div className="flex items-center gap-10">
-        <div className="text-xl font-bold tracking-tight text-black">
+        <button 
+          onClick={() => onPageChange('world-time')}
+          className="text-xl font-bold tracking-tight text-black transition-opacity hover:opacity-70 focus:outline-none"
+        >
           Meet Time
-        </div>
+        </button>
         
         {/* КНОПКИ НАВИГАЦИИ */}
         <nav className="flex items-center gap-2">
