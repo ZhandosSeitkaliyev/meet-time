@@ -9,10 +9,24 @@ const getCellColor = (hour: number) => {
 };
 
 // ПРИНИМАЕМ dayOffset ИЗ ПРОПСОВ
-export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { participants: Participant[], onDelete: (id: number) => void, dayOffset: number }) => {
+export const MeetingTimeline = ({ 
+  participants, 
+  onDelete, 
+  dayOffset,
+  selectedOffset, 
+  onOffsetChange, 
+  duration 
+}: { 
+  participants: Participant[], 
+  onDelete: (id: number) => void, 
+  dayOffset: number,
+  selectedOffset: number | null,
+  onOffsetChange: (offset: number | null) => void,
+  duration: number
+}) => {
   const [now, setNow] = useState(new Date());
   
-  const [dragOffset, setDragOffset] = useState<number | null>(null);
+
   const [isDragging, setIsDragging] = useState(false);
   
   const gridRef = useRef<HTMLDivElement>(null);
@@ -26,7 +40,7 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setDragOffset(null);
+        onOffsetChange(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -53,7 +67,7 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
   const handleMouseDown = (e: React.MouseEvent) => {
     const offset = calculateOffsetMinutes(e.clientX);
     if (offset !== null) {
-      setDragOffset(offset);
+      onOffsetChange(offset);
       setIsDragging(true);
     }
   };
@@ -63,7 +77,7 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
       if (!isDragging) return;
       const offset = calculateOffsetMinutes(e.clientX);
       if (offset !== null) {
-        setDragOffset(offset);
+        onOffsetChange(offset);
       }
     };
     const handleMouseUp = () => setIsDragging(false);
@@ -85,8 +99,8 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
   const nowMinutesFromLeft = 60 + currentMinute - (dayOffset * 24 * 60);
   const nowPercent = (nowMinutesFromLeft / 1440) * 100;
   
-  const durationWidthPercent = (30 / 1440) * 100; 
-  const activePercent = dragOffset !== null ? (((nowMinutesFromLeft + dragOffset) / 1440) * 100) : 0;
+  const durationWidthPercent = (duration / 1440) * 100;
+  const activePercent = selectedOffset !== null ? (((nowMinutesFromLeft + selectedOffset) / 1440) * 100) : 0;
 
   if (participants.length === 0) {
     return (
@@ -133,7 +147,7 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
             </div>
           )}
 
-          {dragOffset !== null && (
+          {selectedOffset !== null && (
             <div 
               className={`absolute top-0 bottom-0 bg-blue-500/15 border-x border-blue-400 transition-all ${isDragging ? 'duration-0' : 'duration-100'}`}
               style={{ 
@@ -149,7 +163,7 @@ export const MeetingTimeline = ({ participants, onDelete, dayOffset }: { partici
           const localNowStr = localNowFormatter.format(now);
 
           // Если выделения нет, часы показывают базу текущего выбранного дня (now + сдвиг дней)
-          const baseDragOffset = dragOffset !== null ? dragOffset : (dayOffset * 24 * 60);
+          const baseDragOffset = selectedOffset !== null ? selectedOffset : (dayOffset * 24 * 60);
           const activeDate = new Date(now.getTime() + baseDragOffset * 60000);
           const localActiveStr = localNowFormatter.format(activeDate);
           

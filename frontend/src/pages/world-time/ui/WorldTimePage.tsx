@@ -55,7 +55,7 @@ export const WorldTimePage = () => {
       <main className="px-8 py-8 max-w-[1600px] mx-auto">
         <div className="flex items-end justify-between mb-6">
           
-          <div>
+          <div className="cursor-default select-none">
             <h1 className="text-3xl font-bold text-gray-900">World Time</h1>
             <p className="mt-2 text-lg text-gray-500">Track time across cities</p>
             
